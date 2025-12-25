@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --------------------------------------
+// Core / Multi-tenancy
+// --------------------------------------
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  offices   Office[]
+}
+
+model Office {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users         User[]
+  clients       Client[]
+  serviceDays   ServiceDay[]
+  officeDiaries OfficeDiary[]
+}
+
+// --------------------------------------
+// Auth & RBAC
+// --------------------------------------
+
+enum Role {
+  ADMIN
+  STAFF
+  VIEWER
+}
+
+model User {
+  id        String   @id @default(uuid())
+  officeId  String?
+  office    Office?  @relation(fields: [officeId], references: [id])
+  name      String
+  email     String   @unique
+  role      Role     @default(STAFF)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// --------------------------------------
+// Client Domain
+// --------------------------------------
+
+model Client {
+  id        String   @id @default(uuid())
+  officeId  String
+  office    Office   @relation(fields: [officeId], references: [id])
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  recipientCertificates RecipientCertificate[]
+  serviceContracts      ServiceContract[]
+  clientAddonDefaults   ClientAddonDefault[]
+  serviceDays           ServiceDay[]
+}
+
+model RecipientCertificate {
+  id         String   @id @default(uuid())
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id])
+  number     String
+  cityCode   String
+  validFrom  DateTime
+  validTo    DateTime
+  paymentCap Int      @default(0) // 上限月額
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model ServiceContract {
+  id          String   @id @default(uuid())
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id])
+  serviceType String   // e.g., "Commute"
+  quantity    Int      // 契約支給量
+  validFrom   DateTime
+  validTo     DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// --------------------------------------
+// Service Day (利用者×日)
+// --------------------------------------
+
+model ServiceDay {
+  id           String    @id @default(uuid())
+  officeId     String
+  office       Office    @relation(fields: [officeId], references: [id])
+  clientId     String
+  client       Client    @relation(fields: [clientId], references: [id])
+  serviceDate  DateTime
+  status       String    // e.g., "Present", "Absent", "Unplanned"
+  
+  checkInTime  DateTime?
+  checkOutTime DateTime?
+  serviceStart DateTime?
+  serviceEnd   DateTime?
+  breakMinutes Int       @default(0)
+  notes        String?
+
+  addons         ServiceDayAddon[]
+  supportRecords SupportRecord[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([officeId, clientId, serviceDate])
+}
+
+// --------------------------------------
+// Addons (食事/送迎など)
+// --------------------------------------
+
+model AddonDefinition {
+  id        String   @id @default(uuid())
+  name      String   // e.g. "Lunch", "Pickup"
+  unitPrice Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ClientAddonDefault {
+  id                String          @id @default(uuid())
+  clientId          String
+  client            Client          @relation(fields: [clientId], references: [id])
+  addonDefinitionId String
+  isEnabled         Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model ServiceDayAddon {
+  id                String          @id @default(uuid())
+  serviceDayId      String
+  serviceDay        ServiceDay      @relation(fields: [serviceDayId], references: [id])
+  name              String
+  quantity          Int             @default(1)
+  unitPrice         Int             @default(0)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+// --------------------------------------
+// Records & Logs
+// --------------------------------------
+
+model SupportRecord {
+  id           String     @id @default(uuid())
+  serviceDayId String
+  serviceDay   ServiceDay @relation(fields: [serviceDayId], references: [id])
+  staffId      String? // 記録者
+  body         String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model OfficeDiary {
+  id        String   @id @default(uuid())
+  officeId  String
+  office    Office   @relation(fields: [officeId], references: [id])
+  date      DateTime
+  weather   String?
+  staffId   String? // 記入者
+  body      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([officeId, date])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  tableName String
+  recordId  String
+  action    String
+  userId    String?
+  timestamp DateTime @default(now())
+  details   Json?
+}
