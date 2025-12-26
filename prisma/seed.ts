@@ -1,4 +1,5 @@
 import { PrismaClient, Role } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
@@ -23,15 +24,23 @@ async function main() {
   console.log('Created Office:', office.id);
 
   // 3. Create Admin User
-  const admin = await prisma.user.create({
-    data: {
+  // AdminPass123!
+  const adminHash = await bcrypt.hash('AdminPass123!', 10);
+  const admin = await prisma.user.upsert({
+    where: { email: 'admin@example.com' },
+    update: {
+      passwordHash: adminHash,
+      role: Role.ADMIN,
+    },
+    create: {
       name: 'Admin User',
       email: 'admin@example.com',
+      passwordHash: adminHash,
       role: Role.ADMIN,
       officeId: office.id,
     },
   });
-  console.log('Created Admin:', admin.email);
+  console.log('Upserted Admin:', admin.email);
 
   // 4. Create Client
   const client = await prisma.client.create({
