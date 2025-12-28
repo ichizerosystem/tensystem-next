@@ -115,3 +115,52 @@ export async function listMonthlyReport(monthStr: string): Promise<MonthlyClient
         };
     });
 }
+
+function escapeCsv(field: any): string {
+    if (field === null || field === undefined) return '';
+    const str = String(field);
+    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+}
+
+export async function exportMonthlyReportCsv(monthStr: string): Promise<{ ok: true; filename: string; csv: string } | { ok: false; message: string }> {
+    try {
+        const data = await listMonthlyReport(monthStr);
+
+        const headers = [
+            "clientName",
+            "commuteDays",
+            "absentDays",
+            "addonTotalCost",
+            "paymentCap",
+            "contractQuantity",
+            "addonBreakdown"
+        ];
+
+        const rows = data.map(row => {
+            const breakdown = row.addonBreakdown
+                .map(a => `${a.name}:${a.totalQuantity}=${a.totalCost}`)
+                .join('; ');
+
+            return [
+                row.name,
+                row.commuteDays,
+                row.absentDays,
+                row.addonTotalCost,
+                row.paymentCap,
+                row.contractQuantity,
+                breakdown
+            ].map(escapeCsv).join(',');
+        });
+
+        const csvContent = [headers.join(','), ...rows].join('\n');
+        const filename = `monthly-report_${monthStr}.csv`;
+
+        return { ok: true, filename, csv: csvContent };
+    } catch (e) {
+        console.error(e);
+        return { ok: false, message: "Server error" };
+    }
+}
