@@ -41,6 +41,7 @@ export default function AlertModal({
             {/* Badges */}
             {capOver && (
                 <button
+                    type="button"
                     onClick={() => setOpenType('cap')}
                     className="inline-block bg-red-100 text-red-800 text-xs px-2 py-1 rounded font-bold hover:bg-red-200"
                 >
@@ -49,6 +50,7 @@ export default function AlertModal({
             )}
             {qtyOver && (
                 <button
+                    type="button"
                     onClick={() => setOpenType('qty')}
                     className="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded font-bold hover:bg-yellow-200"
                 >
@@ -129,6 +131,7 @@ export default function AlertModal({
                                     利用者別月次詳細へ
                                 </Link>
                                 <button
+                                    type="button"
                                     onClick={close}
                                     className="block w-full text-center bg-gray-200 text-gray-700 py-2 rounded hover:bg-gray-300"
                                 >
