@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { listMonthlyReport } from "./actions";
+import DownloadButton from "./download-button";
 import { getJstCurrentMonthStr } from "@/lib/date";
 
 export default async function MonthlyReportPage({
@@ -33,6 +34,9 @@ export default async function MonthlyReportPage({
                         </button>
                     </div>
                 </form>
+                <div>
+                    <DownloadButton month={initialMonth} />
+                </div>
             </div>
 
             <div className="bg-white rounded shadow overflow-x-auto">
