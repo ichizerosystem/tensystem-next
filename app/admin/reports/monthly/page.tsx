@@ -6,12 +6,27 @@ import { getJstCurrentMonthStr } from "@/lib/date";
 export default async function MonthlyReportPage({
     searchParams,
 }: {
-    searchParams: Promise<{ month?: string }>;
+    searchParams: Promise<{ month?: string; alerts?: string; commute?: string }>;
 }) {
     const params = await searchParams;
     const initialMonth = params.month || getJstCurrentMonthStr();
+    const alertsOnly = params.alerts === '1';
+    const commuteOnly = params.commute === '1';
 
-    const reportData = await listMonthlyReport(initialMonth);
+    const rawReportData = await listMonthlyReport(initialMonth);
+
+    const reportData = rawReportData.filter(row => {
+        let keep = true;
+        if (alertsOnly) {
+            const capOver = row.paymentCap != null && row.addonTotalCost > row.paymentCap;
+            const qtyOver = row.contractQuantity != null && row.commuteDays > row.contractQuantity;
+            if (!capOver && !qtyOver) keep = false;
+        }
+        if (keep && commuteOnly) {
+            if (row.commuteDays <= 0) keep = false;
+        }
+        return keep;
+    });
 
     return (
         <div className="space-y-6">
@@ -27,6 +42,28 @@ export default async function MonthlyReportPage({
                             defaultValue={initialMonth}
                             className="border p-2 rounded"
                         />
+                    </div>
+                    <div className="flex items-center gap-4 pb-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                name="alerts"
+                                value="1"
+                                defaultChecked={alertsOnly}
+                                className="w-4 h-4"
+                            />
+                            <span className="text-sm font-bold">⚠️のみ</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                name="commute"
+                                value="1"
+                                defaultChecked={commuteOnly}
+                                className="w-4 h-4"
+                            />
+                            <span className="text-sm font-bold">通所のみ</span>
+                        </label>
                     </div>
                     <div>
                         <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
