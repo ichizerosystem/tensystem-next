@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listMonthlyReport } from "./actions";
 import DownloadButton from "./download-button";
+import AlertModal from "./alert-modal";
 import { getJstCurrentMonthStr } from "@/lib/date";
 
 export default async function MonthlyReportPage({
@@ -87,6 +88,7 @@ export default async function MonthlyReportPage({
                             <th className="p-3 text-right">上限管理月額</th>
                             <th className="p-3 text-right">加算合計額</th>
                             <th className="p-3">加算内訳</th>
+                            <th className="p-3">アラート</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -120,6 +122,14 @@ export default async function MonthlyReportPage({
                                     ) : (
                                         '-'
                                     )}
+                                </td>
+                                <td className="p-3">
+                                    <AlertModal
+                                        monthStr={initialMonth}
+                                        row={row}
+                                        capOver={row.paymentCap != null && row.addonTotalCost > row.paymentCap}
+                                        qtyOver={row.contractQuantity != null && row.commuteDays > row.contractQuantity}
+                                    />
                                 </td>
                             </tr>
                         ))}
